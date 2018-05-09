@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<!-- DeukWon Seo 20180422-->
+	<!-- novice development -->
+	<title>O~~~~MoK</title>
+	<!-- 테이블 2개 겹쳐서 그리기 -->
+	<!-- 보일 테이블을 아래에 한칸 작게, 데이터를 넣고 o, x 칠 테이블을 위에 투명하게. -->
+	<meta charset="UTF-8">
+	<style>		
+		#ContainerBox {
+			text-align: center;
+		}
+		#Container {
+			position: relative;
+			background-color: #fcb911;
+			
+			display:none;
+			margin-top:20px;
+		}
+		.OmokTable {
+			position:relative;
+			border-collapse:collapse !important;
+			background-color: transparent;
+			border:1px transparent solid;
+			/*margin:20px;*/
+		}
+		.OmokTd {
+			border: 1px transparent solid;
+			background-color: transparent;
+			text-align: center;
+			font-size:15px;
+		}
+		.FakeTable {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			border-collapse:collapse !important;
+			background-color: #fcb911;
+			border:1px gray solid;
+				
+		}
+		.FakeTd {
+			border: 1px black solid;
+			background-color: #fcb911;
+			
+		}
+
+		.initialize {
+			text-align: center;
+		}
+		.info {
+			display:inline-block; 
+			
+		}
+		.btns {
+			margin-top:10px;
+		
+		}
+		.btn {
+			border-radius:10px;
+		}
+	</style>
+	<script>
+		
+		function Dol(turn, posX, posY) {
+			this.turn = turn;
+			this.posX = posX;
+			this.posY = posY;
+		}
+
+		function User(arg, flag) {
+			this.flag = flag;
+			this.name = arg;
+			this.dols = new Array;
+		}
+
+		User.prototype.PushDols = function(arg) {
+			this.dols.push(arg);
+		}
+
+		User.prototype.GetDols = function() {
+			return this.dols; 
+		}
+		User.prototype.GetName = function() {
+			return this.name;
+		}
+
+		function OmokGame() {
+			this.user = new Array;	// 사용자 2명 넣을 변수
+			this.turn = 0;		// 사용자 턴 0/1
+			this.OmokDolArray = undefined;	// 오목판에서 오목돌의 위치 및 정보를 가짐
+			this.victory = 0;	// 오목 종결 여부.
+			this.platesize = 0;	// 판 크기 15 20 25를 받을 수 있음.
+		}
+
+		OmokGame.prototype.enrollUser = function(user1, user2) {
+			
+			this.user.push(new User(user1.value, 0));
+			this.user.push(new User(user2.value, 1));
+		}
+
+		OmokGame.prototype.createTable = function(id, tableAttr, tdAttr, index) {
+			var CELL_WIDTH_HEIGHT = 45; // 테이블 셀의 고정된 크기
+			var existingtable = document.getElementById(id);
+			if(existingtable) {
+				existingtable.parentNode.removeChild(existingtable);
+			}
+
+			var table = document.createElement("Table");
+			table.setAttribute("id",id);
+			table.setAttribute("class",tableAttr);
+
+			for(var i = 0; i < index; i++) {
+				var row  = document.createElement("tr");
+				for(var j = 0; j < index; j++) {
+					var cell = document.createElement("td");
+					cell.setAttribute("class",tdAttr)
+					cell.setAttribute('width', CELL_WIDTH_HEIGHT+"px");
+					cell.setAttribute('height', CELL_WIDTH_HEIGHT+"px");
+					row.appendChild(cell);
+
+				}
+				table.appendChild(row);
+			}
+			return table;
+		}
+
+		OmokGame.prototype.ReadyOmok = function(index) {
+			this.victory = 0; // 초기화
+			this.turn = 0;
+			var omoktable = this.createTable("OmokTable", "OmokTable", "OmokTd", index);
+			var faketable = this.createTable("FakeTable", "FakeTable", "FakeTd", index-1);
+
+			this.OmokDolArray = Array2D(index);
+			
+			var Container = document.getElementById("Container");
+			Container.appendChild(faketable);
+			Container.appendChild(omoktable);
+			Container.style.display = "inline-block"; // display none을 block해줌.
+
+
+			this.AttachOmokEvent("OmokTable");
+		}
+
+		// 오목판에서 발생하는 이벤트 
+		OmokGame.prototype.AttachOmokEvent = function(id) {
+			var table = document.getElementById(id);
+			var T = this;
+			table.addEventListener("click", function() { // 오목판에 표시만 하자
+				T.PutDolOn(event);
+			});
+
+		}
+
+		OmokGame.prototype.PutDolOn = function(e) {
+			if(this.victory) {
+				alert("게임 끝. 새로고침 ㄱㄱ");
+				return;
+			}
+
+			var col = e.target.cellIndex,
+				row = e.target.parentNode.rowIndex;
+
+			if(this.OmokDolArray[row][col] || this.check33(row, col)) {
+				alert("그 곳에 둘 수 없다.");
+				return;
+			} else {
+				this.turn == 1 ? e.target.innerText = "x" : e.target.innerText = "o";
+			}
+
+			var T = this;
+			setTimeout(function() {
+				T.afterDolOn(e);
+			}, 50);
+		}
+
+
+		OmokGame.prototype.afterDolOn = function(e) {
+			var col = e.target.cellIndex,
+				row = e.target.parentNode.rowIndex;
+
+			if(this.cond(row,col)) return;
+
+			var _dol = new Dol(this.turn,row,col);
+
+			this.OmokDolArray[row][col] = _dol;
+			this.user[this.turn].PushDols(_dol);
+			
+			var	results = this.checkbattle(row, col);
+			for (result in results) {
+				if (results[result].count === 5) {
+					alert("사용자 : " + this.user[this.turn].GetName() + " 승리"); 
+					this.victory = 1; 
+					return ; 	
+				}
+			}
+
+			this.turn == 1 ? this.turn = 0 : this.turn = 1;
+		}
+
+		OmokGame.prototype.cond = function(row, col) {
+			if(this.victory || this.OmokDolArray[row][col] || this.check33(row, col)) return true;
+			return false;
+		}
+
+		// 33 체크
+		OmokGame.prototype.check33 = function(row, col) {
+			var results = this.checkbattle(row, col),
+				resultsArr = Object.keys(results);
+
+			var check3x3 = resultsArr.filter(function(val) {
+				return results[val].count == 3;
+
+			});
+			var block = resultsArr.filter(function(val) {
+				return results[val].block == 1;
+
+			});
+
+			// 자기를 중심으로 33이 2개 이상
+			if (check3x3.length >= 2 && block.length === 0 ) return true;
+
+			return false;
+
+		}
+
+		
+		// 오목돌을 둘때마다 승리 체크 함수
+		OmokGame.prototype.checkbattle = function(row, col) { // 현재 것만 체크 해서 33인지, 그리고 열린 삼삼 제외하곤 금지
+			var result = {};
+			var count1 = 1, count1ele = new Array;
+			var block1 = 0;
+			// 가로
+			for(var i = col+1; i < this.platesize; i++) {
+				if(this.OmokDolArray[row][i] && this.OmokDolArray[row][i].turn === this.turn) {
+					count1ele.push({"row":row,"col":i});
+					count1++;
+					if (i+1 < this.platesize && this.OmokDolArray[row][i+1] && this.OmokDolArray[row][i+1].turn !== this.turn) block1 = 1;
+					continue;
+				} else if (this.OmokDolArray[row][i] === undefined && i+1 < this.platesize && this.OmokDolArray[row][i+1] && this.OmokDolArray[row][i+1].turn === this.turn) {
+					continue;
+
+				}
+				break;
+			}
+
+			for(var i = col-1; i >= 0; i--) {
+				if(this.OmokDolArray[row][i] && this.OmokDolArray[row][i].turn === this.turn) {
+					count1++;
+					count1ele.push({"row":row,"col":i});
+					if (i-1 >=0 && this.OmokDolArray[row][i-1] && this.OmokDolArray[row][i-1].turn !== this.turn) block1 = 1;
+					continue;
+				} else if (this.OmokDolArray[row][i] === undefined && i-1 >=0 && this.OmokDolArray[row][i-1] && this.OmokDolArray[row][i-1].turn === this.turn) {
+					continue;
+				}
+				break;
+			}
+
+			result["length"] = { count: count1, ele: count1ele, block: block1 };
+
+			var count2 = 1, block2 = 0;
+			var count2ele = new Array;
+			// 세로
+			for(var i = row+1; i < this.platesize; i++) {
+				if(this.OmokDolArray[i][col] && this.OmokDolArray[i][col].turn === this.turn) {
+					count2++;
+					count2ele.push({"row":i,"col":col});
+					if (i+1 < this.platesize && this.OmokDolArray[i+1][col] && this.OmokDolArray[i+1][col].turn !== this.turn) block2 = 1;
+					continue;
+				} else if (this.OmokDolArray[i][col] === undefined && i+1 < this.platesize && this.OmokDolArray[i+1][col] && this.OmokDolArray[i+1][col].turn === this.turn) {
+					continue;
+				}
+				break;
+			}
+
+			for(var i = row-1; i >= 0; i--) {
+				if(this.OmokDolArray[i][col] && this.OmokDolArray[i][col].turn === this.turn) {
+					count2++;
+					count2ele.push({"row":i,"col":col});
+					if (i-1 >=0 && this.OmokDolArray[i-1][col] && this.OmokDolArray[i-1][col].turn !== this.turn) block2 = 1;
+					continue;
+				} else if (this.OmokDolArray[i][col] === undefined && i-1 >=0 && this.OmokDolArray[i-1][col] && this.OmokDolArray[i-1][col].turn === this.turn) {
+					continue;
+				}
+				break;
+			}
+			
+			result["breath"] = { count: count2, ele: count2ele, block: block2 };
+
+			var count3 = 1, block3 = 0;
+			var count3ele = new Array;
+			var count4 = 1, block4 = 0;
+			var count4ele = new Array;
+			// 대각
+			for (var i = row + 1, j = 1; i < this.platesize ; i++, j++) {
+				if(this.OmokDolArray[row+j][col+j] && this.OmokDolArray[row+j][col+j].turn === this.turn) {
+					count3++;
+					count3ele.push({"row":row+j,"col":col+j});
+					if ((row+j+1 < this.platesize && col+j+1 < this.platesize) && this.OmokDolArray[row+j+1][col+j+1] && this.OmokDolArray[row+j+1][col+j+1].turn !== this.turn) block3 = 1;
+					continue;
+				} else if (this.OmokDolArray[row+j][col+j] === undefined && (row+j+1 < this.platesize && col+j+1 < this.platesize) && this.OmokDolArray[row+j+1][col+j+1] && this.OmokDolArray[row+j+1][col+j+1].turn === this.turn) {
+					continue;
+				}
+
+				if(this.OmokDolArray[row+j][col-j] && this.OmokDolArray[row+j][col-j].turn === this.turn) {
+					count4++;
+					count4ele.push({"row":row+j,"col":col-j});
+					if ((row+j+1 < this.platesize && col-(j+1) >= 0) && this.OmokDolArray[row+j+1][col-(j+1)] && this.OmokDolArray[row+j+1][col-(j+1)].turn !== this.turn) block3 = 1;
+					continue;
+				} else if (this.OmokDolArray[row+j][col-j] === undefined && (row+j+1 < this.platesize && col-(j+1) >= 0) && this.OmokDolArray[row+j+1][col-(j+1)] && this.OmokDolArray[row+j+1][col-(j+1)].turn === this.turn) {
+					continue;
+				}
+				break;
+			}
+
+			for (var i = row - 1, j = 1; i >= 0 ; i--, j++) {
+				if(this.OmokDolArray[row-j][col-j] && this.OmokDolArray[row-j][col-j].turn === this.turn) {
+					count3++;
+					count3ele.push({"row":row-j,"col":col-j});
+					if ((row-(j+1) >= 0 && col-(j+1) >= 0) &&this.OmokDolArray[row-(j+1)][col-(j+1)] && this.OmokDolArray[row-(j+1)][col-(j+1)].turn !== this.turn) block3 = 1;
+					continue;
+				} else if (this.OmokDolArray[row-j][col-j] === undefined && (row-(j+1) >= 0 && col-(j+1) >= 0) &&this.OmokDolArray[row-(j+1)][col-(j+1)] && this.OmokDolArray[row-(j+1)][col-(j+1)].turn === this.turn) {
+					continue;
+				}
+
+				if(this.OmokDolArray[row-j][col+j] && this.OmokDolArray[row-j][col+j].turn === this.turn) {
+					count4++;
+					count4ele.push({"row":row-j,"col":col+j});
+					if ((col+j+1 < this.platesize && row-(j+1) >= 0) && this.OmokDolArray[row-(j+1)][col+(j+1)] && this.OmokDolArray[row-(j+1)][col+(j+1)].turn !== this.turn) block3 = 1;
+					continue;
+				} else if (this.OmokDolArray[row-j][col+j] === undefined && (col+j+1 < this.platesize && row-(j+1) >= 0) && this.OmokDolArray[row-(j+1)][col+(j+1)] && this.OmokDolArray[row-(j+1)][col+(j+1)].turn === this.turn) {
+					continue;
+				}
+				break;
+			}
+			
+			result["cross1"] = { count: count3, ele: count3ele, block: block3 };
+			result["cross2"] = { count: count4, ele: count4ele, block: block4 };
+
+			return result;
+		}
+
+		// 초기화 함수, init, start에 대한 이벤트 붙임.
+		function start() {
+			
+			document.getElementById("init").addEventListener("click", function() {
+				location.href = location.href;
+			}) 
+			document.getElementById("start").addEventListener("click", function() {
+
+				var user1_name = document.querySelector(".user1");
+				var user2_name = document.querySelector(".user2");
+
+				if (!user1_name.value || !user2_name.value) {
+					!user1_name.value ? alert("사용자1 입력해줘요") : alert("사용자2 입력해줘요");
+					return false;
+				}
+
+				user1_name.readOnly = true;
+				user2_name.readOnly = true;
+				
+				var game = new OmokGame();
+				game.enrollUser(user1_name, user2_name);
+
+				var select = document.getElementById("selection"),
+					value = select.options[select.selectedIndex].value;
+					val = parseInt(value.replace("size","")),
+					game.platesize = val;
+				if (value == "" || isNaN(val)) return false;
+
+				game.ReadyOmok(val);
+			});
+		}
+
+		function Array2D(index) {
+			var arr = new Array(index);
+			for(var i = 0; i < index; i++){
+				arr[i] = new Array(index);
+			}
+			return arr;
+		}
+
+	</script>
+</head>
+
+<body onload="start()">
+<div class="initialize">
+	<div class="info">
+		<span>
+			<label>사용자1(o)</label>
+			<input class="user1" type="text" placeholder="선공 입니다."/>
+		</span>
+		<br>
+		<span>
+			<label>사용자2(x)</label>
+			<input class="user2" type="text" placeholder="후공 입니다."/>
+		</span>
+		<br>
+		<span>
+			<label>판 크기</label>
+			<select id="selection">
+				<option disabled selected value> -- select an option -- </option>
+				<option value="size15">15</option>
+				<option value="size20">20</option>
+				<option value="size25">25</option>
+			</select>
+		</span>
+	</div>
+	<div class="btns">
+		<span>
+			<button id="start" class="btn">시작하기</button>
+		</span>
+		<span>
+			<button id="init" class="btn">초기화</button>
+		</span>
+	</div>
+</div>
+<div id="ContainerBox">
+	<div id="Container"><!-- 테이블 밖 판 포현 -->
+	</div>
+</div>
+</body>
+</html>
+
