@@ -4,8 +4,6 @@
 	<!-- DeukWon Seo 20180422-->
 	<!-- novice development -->
 	<title>O~~~~MoK</title>
-	<!-- 테이블 2개 겹쳐서 그리기 -->
-	<!-- 보일 테이블을 아래에 한칸 작게, 데이터를 넣고 o, x 칠 테이블을 위에 투명하게. -->
 	<meta charset="UTF-8">
 	<style>		
 		#ContainerBox {
@@ -88,11 +86,11 @@
 		}
 
 		function OmokGame() {
-			this.user = new Array;	// 사용자 2명 넣을 변수
-			this.turn = 0;		// 사용자 턴 0/1
-			this.OmokDolArray = undefined;	// 오목판에서 오목돌의 위치 및 정보를 가짐
-			this.victory = 0;	// 오목 종결 여부.
-			this.platesize = 0;	// 판 크기 15 20 25를 받을 수 있음.
+			this.user = new Array;	// Two user
+			this.turn = 0;		// turn of game 0/1
+			this.OmokDolArray = undefined;	// Omok dol's location and turn info
+			this.victory = 0;	// Omok finish
+			this.platesize = 0;	// size of plate 15 20 25
 		}
 
 		OmokGame.prototype.enrollUser = function(user1, user2) {
@@ -102,7 +100,7 @@
 		}
 
 		OmokGame.prototype.createTable = function(id, tableAttr, tdAttr, index) {
-			var CELL_WIDTH_HEIGHT = 45; // 테이블 셀의 고정된 크기
+			var CELL_WIDTH_HEIGHT = 45; // size of 1 block in Omok
 			var existingtable = document.getElementById(id);
 			if(existingtable) {
 				existingtable.parentNode.removeChild(existingtable);
@@ -128,7 +126,7 @@
 		}
 
 		OmokGame.prototype.ReadyOmok = function(index) {
-			this.victory = 0; // 초기화
+			this.victory = 0; 
 			this.turn = 0;
 			var omoktable = this.createTable("OmokTable", "OmokTable", "OmokTd", index);
 			var faketable = this.createTable("FakeTable", "FakeTable", "FakeTd", index-1);
@@ -138,7 +136,7 @@
 			var Container = document.getElementById("Container");
 			Container.appendChild(faketable);
 			Container.appendChild(omoktable);
-			Container.style.display = "inline-block"; // display none을 block해줌.
+			Container.style.display = "inline-block"; 
 
 
 			this.AttachOmokEvent("OmokTable");
@@ -148,7 +146,7 @@
 		OmokGame.prototype.AttachOmokEvent = function(id) {
 			var table = document.getElementById(id);
 			var T = this;
-			table.addEventListener("click", function() { // 오목판에 표시만 하자
+			table.addEventListener("click", function() { 
 				T.PutDolOn(event);
 			});
 
@@ -205,30 +203,23 @@
 			return false;
 		}
 
-		// 33 체크
+		// 33 check
 		OmokGame.prototype.check33 = function(row, col) {
 			var results = this.checkbattle(row, col),
 				resultsArr = Object.keys(results);
-
 			var check3x3 = resultsArr.filter(function(val) {
 				return results[val].count == 3;
-
 			});
 			var block = resultsArr.filter(function(val) {
 				return results[val].block == 1;
-
 			});
-
-			// 자기를 중심으로 33이 2개 이상
 			if (check3x3.length >= 2 && block.length === 0 ) return true;
-
 			return false;
-
 		}
 
 		
-		// 오목돌을 둘때마다 승리 체크 함수
-		OmokGame.prototype.checkbattle = function(row, col) { // 현재 것만 체크 해서 33인지, 그리고 열린 삼삼 제외하곤 금지
+		// check whether game is done or not
+		OmokGame.prototype.checkbattle = function(row, col) {
 			var result = {};
 			var count1 = 1, count1ele = new Array;
 			var block1 = 0;
@@ -418,7 +409,7 @@
 	</div>
 </div>
 <div id="ContainerBox">
-	<div id="Container"><!-- 테이블 밖 판 포현 -->
+	<div id="Container"><!-- 테이블 밖 판 현 -->
 	</div>
 </div>
 </body>
