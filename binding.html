@@ -1,0 +1,48 @@
+<script> alert("1. before <html>"); </script>
+<html>
+<script> alert("2. After <html>"); </script>
+
+            
+<head> <title>js priority </title> 
+
+  <script src="a.js"></script>
+<script
+  src="https://code.jquery.com/jquery-2.2.4.js"
+  integrity="sha256-iT6Q9iMJYuQiMWNd9lDyBUStIq/8PuOW33aOqmvFpqI="
+  crossorigin="anonymous"></script>
+
+<script>
+	function CallOnload() //모두 로드 된 후에 처리 (페이지안의 이미지나 외부 파일까지 모두 로드) window.onload와 비슷
+    {
+        alert("10. CallOnload()");
+    }
+    
+	 $(document).ready(function() { //dom 객체 로드시 처리 -> 이미지나 외부 리소스ㅜ의 로딩을 기다리지 않음.
+  		alert("8. document.ready()");
+	 });
+
+	 $(window).load(function() { // jquery에서 제공하는 onload와 같은 동작을 함. 
+	 	alert("9. window.load()");
+	 });
+	
+//defer 옵션이라는게 있긴한데 ..
+</script>
+
+
+</head>
+<script> alert("3. after </head>"); </script>
+
+<body onload="CallOnload();">
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+<script> alert("4. in <body>"); </script> <!-- 로드 되면서 실행 dom객체 -->
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+<script> alert("5. Bottom of </body>"); </script>
+
+
+
+</body>
+<script> alert("6. After </body>"); </script>
+
+</html>
+<script> alert("7. After </html>"); </script>
